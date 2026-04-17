@@ -1,0 +1,208 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 222 47% 11%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 222 47% 11%;
+    --sidebar: 0 0% 99%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-border: 214 32% 91%;
+    --sidebar-accent: 210 40% 96%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --radius: 0.75rem;
+    --bg-void: hsl(var(--background));
+    --bg-base: hsl(var(--muted));
+    --bg-elevated: hsl(var(--card));
+    --bg-surface: hsl(var(--secondary));
+    --bg-overlay: hsl(var(--muted));
+    --amber-100: hsl(var(--secondary));
+    --amber-300: hsl(var(--muted));
+    --amber-400: hsl(var(--foreground));
+    --amber-500: hsl(var(--primary));
+    --teal-300: hsl(var(--secondary));
+    --teal-400: hsl(var(--foreground));
+    --teal-500: hsl(var(--primary));
+    --coral-400: hsl(var(--destructive));
+    --coral-500: hsl(var(--destructive));
+    --green-400: hsl(var(--foreground));
+    --text-primary: hsl(var(--foreground));
+    --text-secondary: hsl(var(--muted-foreground));
+    --text-muted: hsl(var(--muted-foreground));
+    --text-code: hsl(var(--foreground));
+    --border-subtle: hsl(var(--border));
+    --border-normal: hsl(var(--border));
+    --border-accent: hsl(var(--ring));
+    --font-display: 'Manrope', sans-serif;
+    --font-body: 'Inter', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+    --r-sm: 0.375rem;
+    --r-md: 0.75rem;
+    --r-lg: 1rem;
+    --r-xl: 1.125rem;
+    --shadow-card: 0 8px 30px rgba(15, 23, 42, 0.06);
+  }
+
+  .dark {
+    --background: 222 47% 7%;
+    --foreground: 210 40% 98%;
+    --card: 222 47% 9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 47% 9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222 47% 11%;
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 217 33% 17%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62% 42%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217 33% 20%;
+    --input: 217 33% 20%;
+    --ring: 212 27% 84%;
+    --sidebar: 222 47% 8%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-border: 217 33% 20%;
+    --sidebar-accent: 217 33% 16%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --bg-void: hsl(var(--background));
+    --bg-base: hsl(var(--muted));
+    --bg-elevated: hsl(var(--card));
+    --bg-surface: hsl(var(--secondary));
+    --bg-overlay: hsl(var(--muted));
+    --amber-100: hsl(var(--secondary));
+    --amber-300: hsl(var(--muted));
+    --amber-400: hsl(var(--foreground));
+    --amber-500: hsl(var(--primary));
+    --teal-300: hsl(var(--secondary));
+    --teal-400: hsl(var(--foreground));
+    --teal-500: hsl(var(--primary));
+    --coral-400: hsl(var(--destructive));
+    --coral-500: hsl(var(--destructive));
+    --green-400: hsl(var(--foreground));
+    --text-primary: hsl(var(--foreground));
+    --text-secondary: hsl(var(--muted-foreground));
+    --text-muted: hsl(var(--muted-foreground));
+    --text-code: hsl(var(--foreground));
+    --border-subtle: hsl(var(--border));
+    --border-normal: hsl(var(--border));
+    --border-accent: hsl(var(--ring));
+    --font-display: 'Manrope', sans-serif;
+    --font-body: 'Inter', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+    --r-sm: 0.375rem;
+    --r-md: 0.75rem;
+    --r-lg: 1rem;
+    --r-xl: 1.125rem;
+    --shadow-card: 0 8px 30px rgba(0, 0, 0, 0.24);
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    @apply scroll-smooth;
+    font-size: 15px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  #root {
+    min-height: 100vh;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+}
+
+@layer utilities {
+  .surface-grid {
+    background-image:
+      linear-gradient(to right, rgba(15, 23, 42, 0.04) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(15, 23, 42, 0.04) 1px, transparent 1px);
+    background-size: 36px 36px;
+  }
+
+  .dark .surface-grid {
+    background-image:
+      linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  }
+
+  .page-shell {
+    @apply relative min-h-screen bg-background;
+  }
+
+  .page-shell::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(circle at top left, rgba(15, 23, 42, 0.05), transparent 30%),
+      radial-gradient(circle at bottom right, rgba(15, 23, 42, 0.04), transparent 28%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .dark .page-shell::before {
+    background:
+      radial-gradient(circle at top left, rgba(255, 255, 255, 0.05), transparent 30%),
+      radial-gradient(circle at bottom right, rgba(255, 255, 255, 0.04), transparent 28%);
+  }
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.4);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@media (max-width: 980px) {
+  html {
+    font-size: 14px;
+  }
+}
