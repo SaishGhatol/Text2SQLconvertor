@@ -1,19 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
-import { Database, FileSpreadsheet, UploadCloud } from 'lucide-react'
+import { Database, FileSpreadsheet, KeyRound, Trash2, UploadCloud, Wifi } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useQueryStore } from '../../stores/queryStore'
 import api from '../../utils/api'
 import { formatApiError } from '../../utils/errors'
+import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
 import { Input } from '../ui/input'
 import { Label } from '../ui/label'
-import { Badge } from '../ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
 import connectIllustration from '../../assets/connect-illustration.svg'
 
 export default function ConnectPage() {
-  const { connected, schemaTree, schemaProfile, suggestedQuestions, setConnected, disconnect } = useQueryStore()
+  const { connected, activeProfileId, schemaTree, schemaProfile, suggestedQuestions, setConnected, disconnect } = useQueryStore()
   const [dbType, setDbType] = useState('SQLite')
   const [form, setForm] = useState({
     sqlite_path: 'D:/text2sql-app/backend/project_data.db',
@@ -23,7 +23,11 @@ export default function ConnectPage() {
     user: '',
     password: '',
   })
+  const [profileName, setProfileName] = useState('')
   const [loading, setLoading] = useState(false)
+  const [savingProfile, setSavingProfile] = useState(false)
+  const [profilesLoading, setProfilesLoading] = useState(false)
+  const [profiles, setProfiles] = useState([])
   const [csvFile, setCsvFile] = useState(null)
   const [tableName, setTableName] = useState('uploaded_data')
   const [csvLoading, setCsvLoading] = useState(false)
@@ -33,6 +37,26 @@ export default function ConnectPage() {
   const fileRef = useRef(null)
 
   const setField = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }))
+
+  const hydrateConnection = (data, nextDbType = dbType) => {
+    setConnected(nextDbType, data.schema_text, data.schema_tree, data.schema_profile, data.suggested_questions, data.active_profile_id ?? null)
+  }
+
+  const loadProfiles = async () => {
+    setProfilesLoading(true)
+    try {
+      const { data } = await api.get('/query/profiles')
+      setProfiles(data.profiles || [])
+    } catch (_) {
+      setProfiles([])
+    } finally {
+      setProfilesLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadProfiles()
+  }, [])
 
   const handleConnect = async () => {
     setLoading(true)
@@ -56,7 +80,7 @@ export default function ConnectPage() {
       }
 
       const { data } = await api.post('/query/connect', payload)
-      setConnected(dbType, data.schema_text, data.schema_tree, data.schema_profile, data.suggested_questions)
+      hydrateConnection(data, dbType)
       toast.success(`Connected to ${dbType}`)
     } catch (error) {
       toast.error(formatApiError(error, 'Connection failed'))
@@ -65,7 +89,78 @@ export default function ConnectPage() {
     }
   }
 
-  const handleDisconnect = () => {
+  const handleSaveProfile = async () => {
+    setSavingProfile(true)
+    try {
+      let payload = { profile_name: profileName.trim(), db_type: dbType }
+      if (dbType === 'SQLite') {
+        payload.sqlite_path = form.sqlite_path
+      } else {
+        payload = {
+          ...payload,
+          host: form.host || 'localhost',
+          database: form.database || null,
+          user: form.user || null,
+          password: form.password || null,
+        }
+
+        if (form.port !== '' && form.port !== null && form.port !== undefined) {
+          const parsedPort = Number(form.port)
+          if (!Number.isNaN(parsedPort)) payload.port = parsedPort
+        }
+      }
+
+      await api.post('/query/profiles', payload)
+      toast.success('Connection profile saved')
+      setProfileName('')
+      await loadProfiles()
+    } catch (error) {
+      toast.error(formatApiError(error, 'Profile save failed'))
+    } finally {
+      setSavingProfile(false)
+    }
+  }
+
+  const handleConnectProfile = async (profile) => {
+    setLoading(true)
+    try {
+      const { data } = await api.post(`/query/profiles/${profile.id}/connect`)
+      hydrateConnection(data, profile.db_type)
+      setDbType(profile.db_type)
+      setForm((current) => ({
+        ...current,
+        sqlite_path: profile.sqlite_path || current.sqlite_path,
+        host: profile.host || current.host,
+        port: profile.port ?? current.port,
+        database: profile.database || current.database,
+        user: profile.user || current.user,
+        password: '',
+      }))
+      toast.success(`Connected using ${profile.profile_name}`)
+      await loadProfiles()
+    } catch (error) {
+      toast.error(formatApiError(error, 'Saved profile connection failed'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDeleteProfile = async (profileId) => {
+    try {
+      await api.delete(`/query/profiles/${profileId}`)
+      toast.success('Connection profile deleted')
+      await loadProfiles()
+    } catch (error) {
+      toast.error(formatApiError(error, 'Delete failed'))
+    }
+  }
+
+  const handleDisconnect = async () => {
+    try {
+      await api.post('/query/disconnect')
+    } catch (_) {
+      // Keep the local cleanup even if the server already dropped the session.
+    }
     disconnect()
     setTablePreviews({})
     toast.success('Disconnected')
@@ -82,7 +177,7 @@ export default function ConnectPage() {
       toast.success(`${data.message} - ${data.rows} rows`)
       setCsvFile(null)
       const { data: schemaData } = await api.get('/query/schema')
-      setConnected(dbType, schemaData.schema_text, schemaData.schema_tree, schemaData.schema_profile, schemaData.suggested_questions)
+      hydrateConnection(schemaData, dbType)
     } catch (error) {
       toast.error(formatApiError(error, 'Upload failed'))
     } finally {
@@ -135,6 +230,12 @@ export default function ConnectPage() {
               <p className="text-sm text-muted-foreground">
                 {tableEntries.length} tables loaded with schema profiling and starter prompts ready.
               </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <Badge variant="outline">{dbType}</Badge>
+                <Badge variant={activeProfileId ? 'default' : 'secondary'}>
+                  {activeProfileId ? 'Saved profile active' : 'Manual session'}
+                </Badge>
+              </div>
             </div>
             <Button variant="outline" className="rounded-2xl" onClick={handleDisconnect}>
               Disconnect
@@ -143,7 +244,7 @@ export default function ConnectPage() {
         </Card>
       )}
 
-      <div className="grid gap-4 xl:grid-cols-2">
+      <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
         <Card className="rounded-[1.75rem]">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-xl">
@@ -197,12 +298,66 @@ export default function ConnectPage() {
               </div>
             )}
 
+            <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
+              <Input value={profileName} onChange={(event) => setProfileName(event.target.value)} placeholder="Connection profile name" />
+              <Button variant="outline" className="rounded-2xl" onClick={handleSaveProfile} disabled={!profileName.trim() || savingProfile}>
+                <KeyRound className="h-4 w-4" />
+                {savingProfile ? 'Saving...' : 'Save Profile'}
+              </Button>
+            </div>
+
             <Button className="w-full rounded-2xl" size="lg" onClick={handleConnect} disabled={loading}>
               {loading ? 'Connecting...' : 'Connect Database'}
             </Button>
           </CardContent>
         </Card>
 
+        <Card className="rounded-[1.75rem]">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <Wifi className="h-5 w-5" />
+              Saved Profiles
+            </CardTitle>
+            <CardDescription>Encrypted datasource profiles for repeatable local and production-style connections.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {profilesLoading ? (
+              <div className="rounded-[1.25rem] border bg-muted/30 px-4 py-6 text-sm text-muted-foreground">Loading profiles...</div>
+            ) : profiles.length === 0 ? (
+              <div className="rounded-[1.25rem] border bg-muted/30 px-4 py-6 text-sm text-muted-foreground">No saved profiles yet. Save a connection above to make reconnection reusable.</div>
+            ) : (
+              profiles.map((profile) => (
+                <div key={profile.id} className="rounded-[1.25rem] border p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="font-semibold">{profile.profile_name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {profile.db_type} · {profile.db_type === 'SQLite' ? profile.sqlite_path : `${profile.host}:${profile.port}/${profile.database}`}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {activeProfileId === profile.id && <Badge>Active</Badge>}
+                      <Button variant="ghost" size="icon" className="rounded-full" onClick={() => handleDeleteProfile(profile.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Button variant="outline" size="sm" className="rounded-full" onClick={() => handleConnectProfile(profile)} disabled={loading}>
+                      Connect
+                    </Button>
+                    <Badge variant="outline">
+                      Last used {profile.last_used_at ? new Date(profile.last_used_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Never'}
+                    </Badge>
+                  </div>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-2">
         <Card className="rounded-[1.75rem]">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-xl">
@@ -256,27 +411,26 @@ export default function ConnectPage() {
             </Button>
           </CardContent>
         </Card>
-      </div>
 
-      <Card className="overflow-hidden rounded-[1.75rem]">
-        <CardContent className="grid gap-6 p-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
-          <div className="space-y-3">
-            <div className="text-xl font-semibold">Connection workflow</div>
-            <p className="text-sm leading-6 text-muted-foreground">
-              Use SQLite for the demo database, or switch to MySQL/PostgreSQL for external sources. CSV imports are added into
-              the active workspace so they can be queried immediately.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <Badge variant="outline">Schema profiling</Badge>
-              <Badge variant="outline">Prompt suggestions</Badge>
-              <Badge variant="outline">CSV import</Badge>
+        <Card className="overflow-hidden rounded-[1.75rem]">
+          <CardContent className="grid gap-6 p-6 lg:items-center">
+            <div className="space-y-3">
+              <div className="text-xl font-semibold">Connection workflow</div>
+              <p className="text-sm leading-6 text-muted-foreground">
+                Use SQLite for the demo database, or switch to MySQL/PostgreSQL for external sources. Profiles are saved in the app metadata database with encrypted credentials so repeated connections do not require re-entry.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="outline">Schema profiling</Badge>
+                <Badge variant="outline">Encrypted profiles</Badge>
+                <Badge variant="outline">CSV import</Badge>
+              </div>
             </div>
-          </div>
-          <div className="overflow-hidden rounded-[1.5rem] border bg-muted/30 p-3">
-            <img src={connectIllustration} alt="Database connection workflow illustration" className="h-auto w-full rounded-[1.25rem]" />
-          </div>
-        </CardContent>
-      </Card>
+            <div className="overflow-hidden rounded-[1.5rem] border bg-muted/30 p-3">
+              <img src={connectIllustration} alt="Database connection workflow illustration" className="h-auto w-full rounded-[1.25rem]" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {connected && (
         <Card className="rounded-[1.75rem]">
@@ -351,7 +505,7 @@ export default function ConnectPage() {
                 </div>
                 <div className="divide-y">
                   {tableEntries.map(([table, columns]) => (
-                    <div key={table} className="grid grid-cols-[minmax(220px,0.8fr)_minmax(0,1.2fr)] gap-4 px-4 py-4">
+                    <div key={table} className="grid gap-4 px-4 py-4 md:grid-cols-[minmax(220px,0.8fr)_minmax(0,1.2fr)]">
                       <div>
                         <div className="font-display text-lg font-bold">{table}</div>
                         <div className="mt-1 text-sm text-muted-foreground">{columns.length} columns</div>

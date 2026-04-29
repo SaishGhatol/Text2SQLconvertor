@@ -7,9 +7,9 @@ const s = {
   page: { padding: '32px 36px' },
   title: { fontFamily: 'var(--font-display)', fontSize: '24px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '4px' },
   desc: { color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '28px' },
-  searchRow: { display: 'flex', gap: '10px', marginBottom: '20px' },
-  searchInput: {
-    flex: 1, padding: '10px 14px',
+  controls: { display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '20px' },
+  input: {
+    width: '100%', padding: '10px 14px',
     background: 'var(--bg-elevated)', border: '1px solid var(--border-normal)',
     borderRadius: 'var(--r-md)', color: 'var(--text-primary)',
     fontFamily: 'var(--font-body)', fontSize: '13px', outline: 'none',
@@ -50,7 +50,7 @@ const s = {
 }
 
 function fmt(iso) {
-  if (!iso) return '—'
+  if (!iso) return '-'
   return new Date(iso).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
 }
 
@@ -66,8 +66,9 @@ function HistoryItem({ item }) {
               {item.status}
             </span>
             {item.was_corrected && <span style={s.badge('var(--amber-400)')}>auto-corrected</span>}
+            {item.db_type && <span style={s.badge('var(--teal-400)')}>{item.db_type}</span>}
             {item.execution_time_ms != null && (
-              <span style={s.badge('var(--teal-400)')}>{item.execution_time_ms}ms</span>
+              <span style={s.badge('var(--sky-400)')}>{item.execution_time_ms}ms</span>
             )}
             {item.row_count != null && (
               <span style={s.badge('#a78bfa')}>{item.row_count} rows</span>
@@ -95,6 +96,9 @@ export default function HistoryPage() {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [dbFilter, setDbFilter] = useState('all')
+  const [correctedFilter, setCorrectedFilter] = useState('all')
 
   useEffect(() => {
     api.get('/history/?limit=50')
@@ -103,31 +107,54 @@ export default function HistoryPage() {
       .finally(() => setLoading(false))
   }, [])
 
-  const filtered = items.filter(
-    (it) =>
-      it.question.toLowerCase().includes(search.toLowerCase()) ||
-      it.sql?.toLowerCase().includes(search.toLowerCase())
-  )
+  const dbTypes = Array.from(new Set(items.map((item) => item.db_type).filter(Boolean)))
+  const filtered = items.filter((it) => {
+    const q = search.toLowerCase()
+    const matchesSearch =
+      it.question.toLowerCase().includes(q) ||
+      it.sql?.toLowerCase().includes(q)
+    const matchesStatus = statusFilter === 'all' || it.status === statusFilter
+    const matchesDb = dbFilter === 'all' || it.db_type === dbFilter
+    const matchesCorrected =
+      correctedFilter === 'all' ||
+      (correctedFilter === 'corrected' ? it.was_corrected : !it.was_corrected)
+
+    return matchesSearch && matchesStatus && matchesDb && matchesCorrected
+  })
 
   return (
     <div style={s.page} className="fade-up">
       <h1 style={s.title}>Query History</h1>
-      <p style={s.desc}>All past queries with SQL, execution stats, and auto-correction flags.</p>
+      <p style={s.desc}>All past queries with SQL, execution stats, correction markers, and quick filters.</p>
 
-      <div style={s.searchRow}>
+      <div style={s.controls}>
         <input
-          style={s.searchInput}
-          placeholder="Search questions or SQL…"
+          style={{ ...s.input, flex: '1 1 320px' }}
+          placeholder="Search questions or SQL..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
+        <select style={{ ...s.input, flex: '1 1 150px' }} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+          <option value="all">All status</option>
+          <option value="success">Success</option>
+          <option value="error">Error</option>
+        </select>
+        <select style={{ ...s.input, flex: '1 1 150px' }} value={dbFilter} onChange={(e) => setDbFilter(e.target.value)}>
+          <option value="all">All DBs</option>
+          {dbTypes.map((dbType) => <option key={dbType} value={dbType}>{dbType}</option>)}
+        </select>
+        <select style={{ ...s.input, flex: '1 1 150px' }} value={correctedFilter} onChange={(e) => setCorrectedFilter(e.target.value)}>
+          <option value="all">All runs</option>
+          <option value="corrected">Auto-corrected</option>
+          <option value="original">Original only</option>
+        </select>
       </div>
 
       <div style={s.list}>
         {loading
           ? Array.from({ length: 5 }).map((_, i) => <div key={i} style={s.shimmer} />)
           : filtered.length === 0
-          ? <div style={s.empty}>{search ? 'No results match your search.' : 'No query history yet. Ask a question to get started.'}</div>
+          ? <div style={s.empty}>{search || statusFilter !== 'all' || dbFilter !== 'all' || correctedFilter !== 'all' ? 'No history matches the current filters.' : 'No query history yet. Ask a question to get started.'}</div>
           : filtered.map((item) => <HistoryItem key={item.id} item={item} />)
         }
       </div>

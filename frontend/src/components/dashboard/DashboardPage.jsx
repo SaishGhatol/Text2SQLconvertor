@@ -44,7 +44,7 @@ const s = {
 }
 
 export default function DashboardPage() {
-  const { schemaProfile, suggestedQuestions } = useQueryStore()
+  const { schemaProfile, suggestedQuestions, savedQueries } = useQueryStore()
   const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -80,7 +80,7 @@ export default function DashboardPage() {
           ['Total Queries', summary?.total_queries ?? 0, 'All-time experiments'],
           ['Success Rate', `${successRate}%`, `${summary?.successful_queries ?? 0} successful runs`],
           ['Avg Exec Time', `${summary?.avg_execution_ms ?? 0}ms`, 'Pipeline execution time'],
-          ['Relations', schemaProfile?.overview?.relationship_count ?? 0, 'Detected foreign-key edges'],
+          ['Saved Queries', savedQueries.length, 'Reusable query library'],
         ].map(([label, value, sub]) => (
           <div key={label} style={s.statCard}>
             <div style={s.statLabel}>{label}</div>
@@ -154,6 +154,9 @@ export default function DashboardPage() {
           <div style={{ paddingTop: '12px', fontSize: '13px', color: 'var(--text-secondary)' }}>
             Largest table: <span style={s.chip}>{schemaProfile?.overview?.largest_table?.name || 'N/A'}</span>
           </div>
+          <div style={{ paddingTop: '12px', fontSize: '13px', color: 'var(--text-secondary)' }}>
+            Relationships: <span style={s.chip}>{schemaProfile?.overview?.relationship_count ?? 0}</span>
+          </div>
         </div>
 
         <div style={s.box}>
@@ -167,6 +170,25 @@ export default function DashboardPage() {
             {(!suggestedQuestions || suggestedQuestions.length === 0) && (
               <div style={{ color: 'var(--text-muted)' }}>Connect a database to generate schema-aware question suggestions.</div>
             )}
+          </div>
+        </div>
+      </div>
+
+      <div style={s.box}>
+        <div style={s.chartTitle}>Saved Query Library</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+          <div>
+            <div style={{ ...s.statValue, fontSize: '28px' }}>{savedQueries.length}</div>
+            <div style={s.statSub}>Saved prompts and SQL templates ready to rerun from the chat workspace.</div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {savedQueries.slice(0, 3).map((item) => (
+              <div key={item.id} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--r-md)', padding: '14px 16px' }}>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '6px' }}>{item.name}</div>
+                <div style={{ color: 'var(--text-secondary)', fontSize: '12px', lineHeight: 1.6 }}>{item.question || 'Saved SQL query'}</div>
+              </div>
+            ))}
+            {savedQueries.length === 0 && <div style={{ color: 'var(--text-muted)' }}>Save a generated query from the chat page to build a reusable analytics library.</div>}
           </div>
         </div>
       </div>

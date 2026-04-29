@@ -38,7 +38,7 @@ const ROUTE_META = {
 export default function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const location = useLocation()
-  const { connected, dbType, schemaProfile } = useQueryStore()
+  const { connected, dbType, schemaProfile, activeProfileId } = useQueryStore()
 
   useEffect(() => {
     const onResize = () => {
@@ -82,6 +82,9 @@ export default function AppShell() {
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant={connected ? 'default' : 'secondary'} className="rounded-full px-3 py-1">
                 {connected ? `${dbType} connected` : 'No source connected'}
+              </Badge>
+              <Badge variant="outline" className="rounded-full px-3 py-1">
+                {activeProfileId ? 'Saved profile session' : 'Manual session'}
               </Badge>
               <Badge variant="outline" className="rounded-full px-3 py-1">
                 {schemaProfile?.overview?.table_count ?? 0} tables

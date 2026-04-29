@@ -15,7 +15,7 @@ import { ModeToggle } from '../theme/ModeToggle'
 const FEATURES = [
   'Schema-aware SQL generation with correction retries',
   'Interactive results, charting, and explainable outputs',
-  'SQLite, MySQL, PostgreSQL, and CSV onboarding',
+  'SQLite, MySQL, PostgreSQL, CSV onboarding, and saved datasource profiles',
 ]
 
 const HIGHLIGHTS = [
@@ -156,6 +156,7 @@ export default function AuthPage() {
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
                 <Input id="password" type="password" value={form.password} onChange={set('password')} required placeholder="Enter password" className="h-11" />
+                {tab === 'signup' && <div className="text-xs text-muted-foreground">Use at least 8 characters with upper/lowercase letters and a number.</div>}
               </div>
 
               <Button type="submit" className="mt-2 w-full rounded-lg" size="lg" disabled={loading}>
@@ -194,6 +195,7 @@ export default function AuthPage() {
 
             <div className="mt-4 flex flex-wrap gap-2 text-xs text-muted-foreground">
               <Badge variant="outline" className="rounded-full px-3 py-1">JWT auth</Badge>
+              <Badge variant="outline" className="rounded-full px-3 py-1">Rate limited</Badge>
               <Badge variant="outline" className="rounded-full px-3 py-1">Persistent theme</Badge>
               <Badge variant="outline" className="rounded-full px-3 py-1">Offline-ready</Badge>
             </div>

@@ -1,14 +1,18 @@
 """
-JWT + Password hashing — uses bcrypt directly, no passlib.
+JWT, password hashing, and lightweight secret encryption helpers.
 """
 
+import base64
 import hashlib
+from datetime import datetime, timedelta, timezone
+
 import bcrypt
-from datetime import datetime, timedelta
-from jose import JWTError, jwt
+from cryptography.fernet import Fernet, InvalidToken
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
+from jose import JWTError, jwt
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from core.config import settings
 from core.database import get_db
 
@@ -16,7 +20,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token")
 
 
 def _prepare(password: str) -> bytes:
-    # SHA-256 first → fixed 64-char hex → always under 72 bytes for bcrypt
+    # SHA-256 first -> fixed 64-char hex -> always under bcrypt's 72-byte input cap.
     return hashlib.sha256(password.encode("utf-8")).hexdigest().encode("utf-8")
 
 
@@ -31,10 +35,31 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 def create_access_token(data: dict) -> str:
     payload = data.copy()
-    payload["exp"] = datetime.utcnow() + timedelta(
-        minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
-    )
+    now = datetime.now(timezone.utc)
+    payload["iat"] = int(now.timestamp())
+    payload["exp"] = now + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+
+
+def _build_fernet() -> Fernet:
+    seed = settings.ENCRYPTION_KEY or settings.SECRET_KEY
+    key = base64.urlsafe_b64encode(hashlib.sha256(seed.encode("utf-8")).digest())
+    return Fernet(key)
+
+
+def encrypt_secret(value: str | None) -> str | None:
+    if not value:
+        return None
+    return _build_fernet().encrypt(value.encode("utf-8")).decode("utf-8")
+
+
+def decrypt_secret(value: str | None) -> str | None:
+    if not value:
+        return None
+    try:
+        return _build_fernet().decrypt(value.encode("utf-8")).decode("utf-8")
+    except InvalidToken as exc:
+        raise HTTPException(status_code=500, detail="Stored datasource secret could not be decrypted.") from exc
 
 
 async def get_current_user(
@@ -59,6 +84,6 @@ async def get_current_user(
         raise credentials_exception
 
     user = await get_user_by_username(db, username)
-    if user is None:
+    if user is None or not user.is_active:
         raise credentials_exception
     return user

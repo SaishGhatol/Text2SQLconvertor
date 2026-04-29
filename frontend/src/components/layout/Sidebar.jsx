@@ -26,7 +26,7 @@ const NAV = [
 
 export default function Sidebar({ open, onToggle }) {
   const { user, logout } = useAuthStore()
-  const { connected, dbType, schemaProfile } = useQueryStore()
+  const { connected, dbType, schemaProfile, savedQueries } = useQueryStore()
   const navigate = useNavigate()
 
   const handleLogout = () => {
@@ -108,6 +108,7 @@ export default function Sidebar({ open, onToggle }) {
                   ? `${dbType} active with ${schemaProfile?.overview?.table_count ?? 0} profiled tables.`
                   : 'Connect a database to enable schema-aware query generation.'}
               </p>
+              <p>{savedQueries.length} saved queries available in the workspace library.</p>
             </div>
           </div>
         )}

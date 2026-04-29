@@ -23,6 +23,7 @@ async def history(
             "was_corrected": bool(r.was_corrected),
             "execution_time_ms": r.execution_time_ms,
             "row_count": r.row_count,
+            "db_type": r.db_type,
             "status": r.status,
             "created_at": r.created_at.isoformat() if r.created_at else None,
         }
